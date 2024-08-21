@@ -1,22 +1,11 @@
 //
-//  HTTPURLResponse.swift
+//  HTTPStatusCode.swift
 //  NetworkManager
 //
 //  Created by ahmed suliman on 19/07/2022.
 //
 
 import Foundation
-
-public enum NetworkError: Error {
-    case nullData
-    case decodingError
-    case data
-    case offline
-    case invalidURL
-    case undefined
-    case custom(Error)
-
-}
 
 public enum HTTPStatusCode: Error {
     /// The response class representation of status codes, these get grouped by their first digit.

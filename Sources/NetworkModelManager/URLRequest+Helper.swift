@@ -1,26 +1,15 @@
 //
-//  URLRequest+JSON.swift
+//  URLRequest+Helper.swift
 //  NetworkManager
 //
 //  Created by ahmed suliman on 19/07/2022.
 //
 
 import Foundation
+import class Alamofire.Session
+import class Alamofire.ServerTrustManager
+import class Alamofire.DisabledTrustEvaluator
 import struct Alamofire.HTTPHeaders
-
-public enum NetworkMethod {
-    case get
-    case post
-}
-
-extension NetworkMethod: CustomStringConvertible {
-    public var description: String {
-        switch self {
-        case .get:               return "GET"
-        case .post:              return "POST"
-        }
-    }
-}
 
 public enum HTTPHeaderField: String {
     case authentication  = "Authorization"
@@ -37,34 +26,32 @@ public enum ContentType: String {
     case ENUS            = "en-us"
 }
 
-public enum UploadType: String {
-    case avatar
-    case file
-}
 
+// MARK: - URLRequest
 extension URLRequest {
-    static func prepareRequest<T: RequestData>(req: T) -> URLRequest? {
-        guard let url = req.baseUrl else {
+    @inlinable
+    static func prepareRequest<T: RequestRoute>(requestRoute: T) -> URLRequest? {
+        guard let url = try? requestRoute.url.asURL() else {
             return nil
         }
 
         var components = URLComponents()
         components.scheme = url.scheme
-        components.host = url.host
-        components.path = req.endPoint ?? ""
+        components.host = requestRoute.url.host
+        components.path = requestRoute.url.path
 
-        if req.query == .path,
-           case .queryItem(let queryItems) = req.parameters {
+        if requestRoute.query == .path,
+           case .queryItem(let queryItems) = requestRoute.parameters {
             components.queryItems = queryItems
         }
 
 
-        var request = URLRequest(url: components.url!)
-        request.httpMethod = req.method.description
+        var request = URLRequest(url: url)
+        request.httpMethod = requestRoute.method.description
 
-        if req.query == .json {
+        if requestRoute.query == .json {
 
-            switch req.parameters {
+            switch requestRoute.parameters {
             case .dict(let dict):
                 request.httpBody = try? JSONSerialization.data(withJSONObject: dict, options: [])
             case .queryItem(let queryItems):
@@ -74,10 +61,20 @@ extension URLRequest {
                 request.httpBody = try? JSONEncoder().encode(objc)
             }
         }
-        request.headers = req.headers
+        request.headers = requestRoute.headers
 
         return request
     }
 
 }
 
+
+extension Session {
+    @inlinable
+    static func prepareSession(host: String) -> Session {
+        let manager = ServerTrustManager(evaluators: [host: DisabledTrustEvaluator()])
+        let configuration = URLSessionConfiguration.af.default
+        configuration.requestCachePolicy = .returnCacheDataElseLoad
+        return Session(configuration: configuration, serverTrustManager: manager)
+    }
+}
